@@ -18,8 +18,7 @@ EQUITY_TICKERS = {
     'SP500': '^GSPC',
     'XU100': 'XU100.IS',
     'IMOEX': 'IMOEX.ME',
-    'BRENT': 'BZ=F',
-    'WIG20': 'WIG20.WA'   # Warsaw top 20 index — works on Yahoo
+    'BRENT': 'BZ=F'
 }
 
 FX_TICKERS = {
@@ -75,7 +74,6 @@ def load_kase_excel(filename: str = 'Index_KASE_260316.xlsx') -> pd.DataFrame:
     except Exception as e:
         print(f'  ERROR loading KASE excel: {e}')
         return pd.DataFrame()
-
 
 # ── World Bank ─────────────────────────────────────────────────────────────────
 

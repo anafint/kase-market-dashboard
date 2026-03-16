@@ -44,6 +44,43 @@ def clean_kase(filename: str = 'kase_index_clean.csv') -> pd.DataFrame:
     print(f'  Saved kase_index_clean.csv ({len(df)} rows)\n')
     return df
 
+def clean_wig20(filename: str = 'WIG20 Historical Data.csv') -> pd.DataFrame:
+    print('  Cleaning WIG20 data...')
+    path = os.path.join(RAW_DIR, filename)
+    df = pd.read_csv(path, sep=',')
+
+    df.columns = ['date', 'close', 'open', 'high', 'low', 'volume', 'change_pct']
+    df = df.drop(columns=['change_pct'])
+
+    # parse date
+    df['date'] = pd.to_datetime(df['date'], format='%m/%d/%Y')
+
+    # remove commas from price columns
+    for col in ['close', 'open', 'high', 'low']:
+        df[col] = df[col].astype(str).str.replace(',', '').astype(float)
+
+    # convert volume from string like '53.83M' to a number
+    def parse_volume(v):
+        v = str(v).strip()
+        if v.endswith('M'):
+            return float(v[:-1]) * 1_000_000
+        elif v.endswith('K'):
+            return float(v[:-1]) * 1_000
+        elif v == '-' or v == '':
+            return None
+        return float(v)
+
+    df['volume'] = df['volume'].apply(parse_volume)
+    df['ticker_name'] = 'WIG20'
+    df['ticker']      = 'WIG20'
+    df = df.rename(columns={'ticker_name': 'name'})  # add this line
+    df = df.dropna(subset=['close'])
+    df = df.sort_values('date').reset_index(drop=True)
+
+    path_out = os.path.join(PROCESSED_DIR, 'wig20_clean.csv')
+    df.to_csv(path_out, index=False)
+    print(f'  Saved wig20_clean.csv ({len(df)} rows)\n')
+    return df
 
 # ── FX rates ───────────────────────────────────────────────────────────────────
 
@@ -90,11 +127,9 @@ def clean_macro(filename: str = 'macro_indicators.csv') -> pd.DataFrame:
 
 # ── Derived metrics ────────────────────────────────────────────────────────────
 
-def compute_derived(equity_df: pd.DataFrame, kase_df: pd.DataFrame) -> pd.DataFrame:
+def compute_derived(equity_df: pd.DataFrame, kase_df: pd.DataFrame, wig20_df: pd.DataFrame) -> pd.DataFrame:
     print('  Computing derived metrics...')
-
-    # combine equity and KASE into one dataframe
-    combined = pd.concat([equity_df, kase_df], ignore_index=True)
+    combined = pd.concat([equity_df, kase_df, wig20_df], ignore_index=True)
     combined = combined.sort_values(['name', 'date']).reset_index(drop=True)
 
     results = []
@@ -138,6 +173,9 @@ if __name__ == '__main__':
     print('=== Cleaning KASE index ===')
     kase_df = clean_kase()
 
+    print('=== Cleaning WIG20 ===')
+    wig20_df = clean_wig20()
+
     print('=== Cleaning FX rates ===')
     clean_fx()
 
@@ -145,6 +183,4 @@ if __name__ == '__main__':
     clean_macro()
 
     print('=== Computing derived metrics ===')
-    compute_derived(equity_df, kase_df)
-
-    print('Done. Check data/processed/ for output files.')
+    compute_derived(equity_df, kase_df, wig20_df)
